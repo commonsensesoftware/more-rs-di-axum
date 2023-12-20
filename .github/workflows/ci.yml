@@ -34,9 +34,7 @@ jobs:
         run: cargo install cargo2junit
 
       - name: Cargo Build
-        run: |
-          cargo build
-          cargo build --features async
+        run: cargo build
 
       - name: Cargo Test
         run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > target/debug/results.xml
