@@ -18,11 +18,7 @@ doctest = false
 
 [dependencies]
 axum = "0.7.2"
-#more-di = { version = "3.0.0", features = ["async"] }
-
-[dependencies.more-di]
-path = "../more-rs-di/src/di"
-features = ["async"]
+more-di = { version = "3.1", features = ["async"] }
 
 [dev-dependencies]
 # REF: https://github.com/tokio-rs/axum/blob/main/axum/Cargo.toml#L33
