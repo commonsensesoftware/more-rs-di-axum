@@ -8,7 +8,7 @@ fully-fledged DI framework. _State_ in `axum` must support `Clone` and is copied
 the native _State_ model does not intrinsically support a _scoped_ (e.g. per-request) lifetime. This is a limitation of
 `Clone`. A _state_ can be wrapped in `Arc` as a _singleton_; otherwise, it is _transient_. `more-di-axum` brings full support
 for various lifetimes by layering over the [more-di](https://crates.io/crates/more-di) library and makes them ergonomic to
-consume with `axum`. Since `more-di` is complete DI framework, swapping out dependency registration in different contexts,
+consume within `axum`. Since `more-di` is a complete DI framework, swapping out dependency registration in different contexts,
 such as testing, is trivial.
 
 ## Contributing

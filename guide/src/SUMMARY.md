@@ -8,4 +8,6 @@
 
 # Reference Guide
 
-- [](guide/.md)
+- [Service Registration](guide/registration.md)
+- [Service Resolution](guide/resolution.md)
+- [Best Practices](guide/best_practices.md)
