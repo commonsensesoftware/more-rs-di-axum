@@ -155,7 +155,7 @@ mod tests {
     use crate::{RouterServiceProviderExtensions, TestClient};
     use axum::{
         routing::{get, post},
-        Router,
+        Router, extract::State,
     };
     use di::{injectable, Injectable, ServiceCollection};
     use http::StatusCode;
@@ -300,5 +300,50 @@ mod tests {
 
         // assert
         assert_eq!(&text, "2");
+    }
+
+    #[tokio::test]
+    async fn inject_with_key_and_state_into_handler() {
+        // arrange
+        trait Service: Send + Sync {
+            fn do_work(&self) -> String;
+        }
+
+        #[injectable(Service)]
+        struct ServiceImpl;
+
+        impl Service for ServiceImpl {
+            fn do_work(&self) -> String {
+                "Test".into()
+            }
+        }
+
+        #[derive(Clone)]
+        struct AppState;
+
+        async fn handler(
+            InjectWithKey(service): InjectWithKey<key::Basic, dyn Service>,
+            State(_state): State<AppState>) -> String {
+            service.do_work()
+        }
+
+        let provider = ServiceCollection::new()
+            .add(ServiceImpl::scoped().with_key::<key::Basic>())
+            .build_provider()
+            .unwrap();
+
+        let app = Router::new()
+            .route("/test", get(handler))
+            .with_state(AppState)
+            .with_provider(provider);
+
+        let client = TestClient::new(app);
+
+        // act
+        let response = client.get("/test").send().await;
+        let text = response.text().await;
+
+        // assert
+        assert_eq!(&text, "Test");
     }
 }
