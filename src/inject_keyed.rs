@@ -38,10 +38,14 @@ fn unregistered_type_with_key<TKey, TSvc: ?Sized>() -> String {
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for TryInjectWithKey<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for TryInjectWithKey<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_by_key::<TKey, TSvc>()))
         } else {
@@ -51,10 +55,14 @@ impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for TryInjectWithKey<TKe
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectWithKey<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for InjectWithKey<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             if let Some(service) = provider.get_by_key::<TKey, TSvc>() {
                 return Ok(Self(service));
@@ -69,10 +77,14 @@ impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectWithKey<TKey, 
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for TryInjectWithKeyMut<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for TryInjectWithKeyMut<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_by_key_mut::<TKey, TSvc>()))
         } else {
@@ -82,10 +94,14 @@ impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for TryInjectWithKeyMut<
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectWithKeyMut<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for InjectWithKeyMut<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             if let Some(service) = provider.get_by_key_mut::<TKey, TSvc>() {
                 return Ok(Self(service));
@@ -100,10 +116,14 @@ impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectWithKeyMut<TKe
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectAllWithKey<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for InjectAllWithKey<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_by_key::<TKey, TSvc>().collect()))
         } else {
@@ -113,10 +133,14 @@ impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectAllWithKey<TKe
 }
 
 #[async_trait]
-impl<TKey, TSvc: ?Sized + 'static> FromRequestParts<()> for InjectAllWithKeyMut<TKey, TSvc> {
+impl<TKey, TSvc, S> FromRequestParts<S> for InjectAllWithKeyMut<TKey, TSvc>
+where
+    TSvc: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_by_key_mut::<TKey, TSvc>().collect()))
         } else {

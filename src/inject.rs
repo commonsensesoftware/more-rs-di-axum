@@ -37,10 +37,14 @@ fn unregistered_type<T: ?Sized>() -> String {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for TryInject<T> {
+impl<T, S> FromRequestParts<S> for TryInject<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get::<T>()))
         } else {
@@ -50,10 +54,14 @@ impl<T: ?Sized + 'static> FromRequestParts<()> for TryInject<T> {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for Inject<T> {
+impl<T, S> FromRequestParts<S> for Inject<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             if let Some(service) = provider.get::<T>() {
                 return Ok(Self(service));
@@ -65,10 +73,14 @@ impl<T: ?Sized + 'static> FromRequestParts<()> for Inject<T> {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for TryInjectMut<T> {
+impl<T, S> FromRequestParts<S> for TryInjectMut<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_mut::<T>()))
         } else {
@@ -78,10 +90,14 @@ impl<T: ?Sized + 'static> FromRequestParts<()> for TryInjectMut<T> {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for InjectMut<T> {
+impl<T, S> FromRequestParts<S> for InjectMut<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             if let Some(service) = provider.get_mut::<T>() {
                 return Ok(Self(service));
@@ -93,10 +109,14 @@ impl<T: ?Sized + 'static> FromRequestParts<()> for InjectMut<T> {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for InjectAll<T> {
+impl<T, S> FromRequestParts<S> for InjectAll<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all::<T>().collect()))
         } else {
@@ -106,10 +126,14 @@ impl<T: ?Sized + 'static> FromRequestParts<()> for InjectAll<T> {
 }
 
 #[async_trait]
-impl<T: ?Sized + 'static> FromRequestParts<()> for InjectAllMut<T> {
+impl<T, S> FromRequestParts<S> for InjectAllMut<T>
+where
+    T: ?Sized + 'static,
+    S: Send + Sync,
+{
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &()) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_mut::<T>().collect()))
         } else {
