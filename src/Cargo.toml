@@ -17,10 +17,11 @@ path = "lib.rs"
 doctest = false
 
 [dependencies]
-axum = "0.7"
+axum = { version = "0.7", default-features = false }
 more-di = { version = "3.1", features = ["async"] }
 
 [dev-dependencies]
+axum = { version = "0.7", default-features = false, features = ["http1", "tokio", "tower-log"] }
 # REF: https://github.com/tokio-rs/axum/blob/main/axum/Cargo.toml#L33
 bytes = "1.0"
 http = "1.0.0"
