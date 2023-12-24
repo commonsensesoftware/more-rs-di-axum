@@ -44,7 +44,10 @@ pub trait RouterServiceProviderExtensions {
     fn with_provider(self, provider: ServiceProvider) -> Self;
 }
 
-impl RouterServiceProviderExtensions for Router {
+impl<S> RouterServiceProviderExtensions for Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     fn with_provider(self, provider: ServiceProvider) -> Self {
         self.route_layer(from_fn_with_state(provider, services_middleware))
     }
