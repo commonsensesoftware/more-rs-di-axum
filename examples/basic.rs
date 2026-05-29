@@ -1,36 +1,40 @@
 //! Run with
 //!
 //! ```not_rust
-//! cargo test -p example-basic-di
+//! cargo test --example basic
 //! ```
 
 use axum::{
     routing::{get, post},
     Json, Router,
 };
-use di::*;
-use di_axum::*;
+use di::{injectable, Injectable, ServiceCollection};
+use di_axum::{prelude::*, Inject};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
     let mut services = ServiceCollection::new();
+
     add_default_services(&mut services);
+
     let app = build_app(services);
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:5000").await.unwrap();
+
     println!("listening on {}", listener.local_addr().unwrap());
+
     axum::serve(listener, app).await.unwrap();
 }
 
-trait User {
+trait User: Send + Sync {
     fn greet(&self) -> &str;
 }
 
-trait Sorter {
+trait Sorter: Send + Sync {
     fn sort(&self, array: &mut [u8]);
 }
 
-#[injectable(User + Send + Sync)]
+#[injectable(User)]
 struct DefaultUser;
 
 impl User for DefaultUser {
@@ -39,7 +43,7 @@ impl User for DefaultUser {
     }
 }
 
-#[injectable(Sorter + Send + Sync)]
+#[injectable(Sorter)]
 struct AscendingOrder;
 
 impl Sorter for AscendingOrder {
@@ -53,14 +57,11 @@ fn add_default_services(services: &mut ServiceCollection) {
     services.try_add(AscendingOrder::scoped());
 }
 
-async fn greeting(Inject(user): Inject<dyn User + Send + Sync>) -> String {
+async fn greeting(Inject(user): Inject<dyn User>) -> String {
     user.greet().into()
 }
 
-async fn sort_content(
-    Inject(sorter): Inject<dyn Sorter + Send + Sync>,
-    payload: Json<serde_json::Value>,
-) -> Json<serde_json::Value> {
+async fn sort_content(Inject(sorter): Inject<dyn Sorter>, payload: Json<serde_json::Value>) -> Json<serde_json::Value> {
     let mut body: Vec<_> = payload
         .0
         .as_array()
@@ -90,7 +91,7 @@ mod tests {
     use serde_json::{json, Value};
     use tower::ServiceExt;
 
-    #[injectable(User + Send + Sync)]
+    #[injectable(User)]
     struct TestUser;
 
     // test user with alternate greeting
@@ -100,7 +101,7 @@ mod tests {
         }
     }
 
-    #[injectable(Sorter + Send + Sync)]
+    #[injectable(Sorter)]
     struct DescendingOrder;
 
     // test orderer in descending order
@@ -117,6 +118,7 @@ mod tests {
         let mut services = ServiceCollection::new();
 
         services.add(TestUser::scoped());
+        services.add(DescendingOrder::singleton());
         add_default_services(&mut services);
 
         let app = build_app(services);
@@ -150,9 +152,7 @@ mod tests {
                     .method(http::Method::POST)
                     .uri("/json")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::to_vec(&json!([1, 2, 3, 4])).unwrap(),
-                    ))
+                    .body(Body::from(serde_json::to_vec(&json!([1, 2, 3, 4])).unwrap()))
                     .unwrap(),
             )
             .await
