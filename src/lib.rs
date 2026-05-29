@@ -3,22 +3,10 @@
 mod inject;
 mod inject_keyed;
 
-use axum::{
-    extract::{Request, State},
-    middleware::{from_fn_with_state, Next},
-    response::Response,
-    Router,
+pub use inject::{Inject, InjectAll, InjectAllMut, InjectMut, TryInject, TryInjectMut};
+pub use inject_keyed::{
+    InjectAllWithKey, InjectAllWithKeyMut, InjectWithKey, InjectWithKeyMut, TryInjectWithKey, TryInjectWithKeyMut,
 };
-use di::ServiceProvider;
-
-pub use inject::*;
-pub use inject_keyed::*;
-
-#[cfg(test)]
-mod test_client;
-
-#[cfg(test)]
-pub(crate) use test_client::*;
 
 async fn services_middleware(
     State(provider): State<ServiceProvider>,

@@ -1,5 +1,5 @@
 use axum::http::StatusCode;
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use di::{KeyedRef, KeyedRefMut, ServiceProvider};
 use std::any::type_name;
 use std::convert::Infallible;
@@ -37,7 +37,6 @@ fn unregistered_type_with_key<TKey, TSvc: ?Sized>() -> String {
     )
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for TryInjectWithKey<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -54,7 +53,6 @@ where
     }
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for InjectWithKey<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -76,7 +74,6 @@ where
     }
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for TryInjectWithKeyMut<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -93,7 +90,6 @@ where
     }
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for InjectWithKeyMut<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -115,7 +111,6 @@ where
     }
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for InjectAllWithKey<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -127,12 +122,11 @@ where
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_by_key::<TKey, TSvc>().collect()))
         } else {
-            Ok(Self(Vec::with_capacity(0)))
+            Ok(Self(Vec::new()))
         }
     }
 }
 
-#[async_trait]
 impl<TKey, TSvc, S> FromRequestParts<S> for InjectAllWithKeyMut<TKey, TSvc>
 where
     TSvc: ?Sized + 'static,
@@ -144,18 +138,22 @@ where
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_by_key_mut::<TKey, TSvc>().collect()))
         } else {
-            Ok(Self(Vec::with_capacity(0)))
+            Ok(Self(Vec::new()))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::future::IntoFuture;
+
     use super::*;
-    use crate::{RouterServiceProviderExtensions, TestClient};
+    use crate::prelude::*;
     use axum::{
+        extract::State,
         routing::{get, post},
-        Router, extract::State,
+        test_helpers::TestClient,
+        Router,
     };
     use di::{injectable, Injectable, ServiceCollection};
     use http::StatusCode;
@@ -187,7 +185,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
 
         // assert
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -199,9 +197,7 @@ mod tests {
         #[injectable]
         struct Service;
 
-        async fn handler(
-            TryInjectWithKey(_service): TryInjectWithKey<key::Advanced, Service>,
-        ) -> StatusCode {
+        async fn handler(TryInjectWithKey(_service): TryInjectWithKey<key::Advanced, Service>) -> StatusCode {
             StatusCode::NO_CONTENT
         }
 
@@ -212,7 +208,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.post("/test").send().await;
+        let response = client.post("/test").into_future().await;
 
         // assert
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
@@ -243,14 +239,12 @@ mod tests {
             .build_provider()
             .unwrap();
 
-        let app = Router::new()
-            .route("/test", get(handler))
-            .with_provider(provider);
+        let app = Router::new().route("/test", get(handler)).with_provider(provider);
 
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert
@@ -275,9 +269,7 @@ mod tests {
         impl Thing for Thing2 {}
         impl Thing for Thing3 {}
 
-        async fn handler(
-            InjectAllWithKey(things): InjectAllWithKey<key::Basic, dyn Thing>,
-        ) -> String {
+        async fn handler(InjectAllWithKey(things): InjectAllWithKey<key::Basic, dyn Thing>) -> String {
             things.len().to_string()
         }
 
@@ -288,14 +280,12 @@ mod tests {
             .build_provider()
             .unwrap();
 
-        let app = Router::new()
-            .route("/test", get(handler))
-            .with_provider(provider);
+        let app = Router::new().route("/test", get(handler)).with_provider(provider);
 
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert
@@ -323,7 +313,8 @@ mod tests {
 
         async fn handler(
             InjectWithKey(service): InjectWithKey<key::Basic, dyn Service>,
-            State(_state): State<AppState>) -> String {
+            State(_state): State<AppState>,
+        ) -> String {
             service.do_work()
         }
 
@@ -340,7 +331,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert
