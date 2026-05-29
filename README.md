@@ -17,10 +17,13 @@ You may be looking for:
 
 ## Dependency Injection in Axum
 
-Consider the following structure.
+Consider the following `Person` structure which can be composed into a web application:
 
-```rust
-use di::*;
+```rust,no_run
+use axum::{routing::get, Router};
+use di::{injectable, Injectable, ServiceCollection};
+use di_axum::{prelude::*, Inject};
+use tokio::net::TcpListener;
 
 #[injectable]
 struct Person;
@@ -30,14 +33,6 @@ impl Person {
         "Hello world!"
     }
 }
-```
-
-This information can now be composed into a web application:
-
-```rust
-use crate::*;
-use di::*;
-use di_axum::*;
 
 async fn say_hello(Inject(person): Inject<Person>) -> String {
     person.speak().to_owned()
