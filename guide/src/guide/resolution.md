@@ -2,8 +2,8 @@
 
 # Service Resolution
 
-Services are resolved and injected using the functions provided by [`ServiceProvider`]. A new _scope_ is created during each
-HTTP request before the handler is executed.
+Services are resolved and injected using the functions provided by [`ServiceProvider`]. A new _scope_ is created during
+each HTTP request before the handler is executed.
 
 | Extactor           | Function                    |
 | ------------------ | --------------------------- |

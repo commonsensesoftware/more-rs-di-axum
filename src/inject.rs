@@ -1,5 +1,5 @@
 use axum::http::StatusCode;
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use di::{Ref, RefMut, ServiceProvider};
 use std::any::type_name;
 use std::convert::Infallible;
@@ -30,13 +30,9 @@ pub struct InjectAllMut<T: ?Sized>(pub Vec<RefMut<T>>);
 
 #[inline]
 fn unregistered_type<T: ?Sized>() -> String {
-    format!(
-        "No service for type '{}' has been registered.",
-        type_name::<T>()
-    )
+    format!("No service for type '{}' has been registered.", type_name::<T>())
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for TryInject<T>
 where
     T: ?Sized + 'static,
@@ -53,7 +49,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for Inject<T>
 where
     T: ?Sized + 'static,
@@ -72,7 +67,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for TryInjectMut<T>
 where
     T: ?Sized + 'static,
@@ -89,7 +83,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for InjectMut<T>
 where
     T: ?Sized + 'static,
@@ -108,7 +101,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for InjectAll<T>
 where
     T: ?Sized + 'static,
@@ -120,12 +112,11 @@ where
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all::<T>().collect()))
         } else {
-            Ok(Self(Vec::with_capacity(0)))
+            Ok(Self(Vec::new()))
         }
     }
 }
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for InjectAllMut<T>
 where
     T: ?Sized + 'static,
@@ -137,18 +128,21 @@ where
         if let Some(provider) = parts.extensions.get::<ServiceProvider>() {
             Ok(Self(provider.get_all_mut::<T>().collect()))
         } else {
-            Ok(Self(Vec::with_capacity(0)))
+            Ok(Self(Vec::new()))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::future::IntoFuture;
+
     use super::*;
-    use crate::{RouterServiceProviderExtensions, TestClient};
+    use crate::prelude::*;
     use axum::{
         extract::State,
         routing::{get, post},
+        test_helpers::TestClient,
         Router,
     };
     use di::{injectable, Injectable, ServiceCollection};
@@ -176,7 +170,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
 
         // assert
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -199,7 +193,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.post("/test").send().await;
+        let response = client.post("/test").into_future().await;
 
         // assert
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
@@ -230,14 +224,12 @@ mod tests {
             .build_provider()
             .unwrap();
 
-        let app = Router::new()
-            .route("/test", get(handler))
-            .with_provider(provider);
+        let app = Router::new().route("/test", get(handler)).with_provider(provider);
 
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert
@@ -325,14 +317,12 @@ mod tests {
             .build_provider()
             .unwrap();
 
-        let app = Router::new()
-            .route("/count", get(handler))
-            .with_provider(provider);
+        let app = Router::new().route("/count", get(handler)).with_provider(provider);
 
         let client = TestClient::new(app);
 
         // act
-        let mut response = client.get("/count").send().await;
+        let mut response = client.get("/count").into_future().await;
 
         // [Singleton] Global = 1
         // [Scoped] SharedCounterA = 1
@@ -342,7 +332,7 @@ mod tests {
         // 1 + 2 (shared) + 2 (shared) + 1 = 6
         let first = response.text().await;
 
-        response = client.get("/count").send().await;
+        response = client.get("/count").into_future().await;
 
         // [Singleton] Global = 2
         // [Scoped] SharedCounterA = 1
@@ -386,14 +376,12 @@ mod tests {
             .build_provider()
             .unwrap();
 
-        let app = Router::new()
-            .route("/test", get(handler))
-            .with_provider(provider);
+        let app = Router::new().route("/test", get(handler)).with_provider(provider);
 
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert
@@ -419,10 +407,7 @@ mod tests {
         #[derive(Clone)]
         struct AppState;
 
-        async fn handler(
-            Inject(service): Inject<dyn Service>,
-            State(_state): State<AppState>,
-        ) -> String {
+        async fn handler(Inject(service): Inject<dyn Service>, State(_state): State<AppState>) -> String {
             service.do_work()
         }
 
@@ -439,7 +424,7 @@ mod tests {
         let client = TestClient::new(app);
 
         // act
-        let response = client.get("/test").send().await;
+        let response = client.get("/test").into_future().await;
         let text = response.text().await;
 
         // assert

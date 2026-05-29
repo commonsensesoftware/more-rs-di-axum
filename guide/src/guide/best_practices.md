@@ -2,20 +2,24 @@
 
 # Best Practices
 
-To make it easy to test an application, it is recommended that you expose a function that configures the default set of services. This will make it simple to use the same default configuration as the application and replace only the parts that are necessary for testing.
+To make it easy to test an application, it is recommended that you expose a function that configures the default set of
+services. This will make it simple to use the same default configuration as the application and replace only the parts
+that are necessary for testing.
 
-If a service can be replaced, then it should be registered using [`try_add`]. A service can still be replaced after it has been registered, but [`try_add`] will skip the process altogether if the service has already been registered.
+If a service can be replaced, then it should be registered using [`try_add`]. A service can still be replaced after it
+has been registered, but [`try_add`] will skip the process altogether if the service has already been registered.
 
 ```rust
-use crate::*;
+use async_trait::async_trait;
 use axum::{
-    async_trait,
     extract::Path,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
+use di::ServiceCollection;
+use di_axum::{prelude::*, Inject};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -49,35 +53,35 @@ async fn main() {
 }
 
 #[async_trait]
-trait UserRepo {
+trait UserRepo: Send + Sync {
     async fn find(&self, user_id: Uuid) -> Result<User, UserRepoError>;
     async fn create(&self, params: CreateUser) -> Result<User, UserRepoError>;
 }
 
-#[injectable(UserRepo + Send + Sync)]
+#[injectable(UserRepo)]
 struct ExampleUserRepo;
 
 #[async_trait]
 impl UserRepo for ExampleUserRepo {
-    async fn find(&self, _user_id: Uuid) -> Result<User, UserRepoError> {
+    async fn find(&self, user_id: Uuid) -> Result<User, UserRepoError> {
         unimplemented!()
     }
 
-    async fn create(&self, _params: CreateUser) -> Result<User, UserRepoError> {
+    async fn create(&self, params: CreateUser) -> Result<User, UserRepoError> {
         unimplemented!()
     }
 }
 
 async fn one_user(
     Path(id): Path<Uuid>,
-    Inject(repo): Inject<dyn UserRepo + Send + Sync>,
+    Inject(repo): Inject<dyn UserRepo>,
 ) -> Result<Json<User>, AppError> {
     let user = repo.find(user_id).await?;
     Ok(user.into())
 }
 
 async fn new_user(
-    Inject(repo): Inject<dyn UserRepo + Send + Sync>,
+    Inject(repo): Inject<dyn UserRepo>,
     Json(params): Json<CreateUser>,
 ) -> Result<Json<User>, AppError> {
     let user = repo.create(params).await?;
@@ -90,7 +94,7 @@ You can now easily test your application by replacing on the only necessary serv
 1. Create a `TestUserRepo` to simulate the behavior of a `dyn UserRepo`
 2. Register `TestUserRepo` in a new `ServiceCollection`
 3. Register all other default services
-   - Since `dyn UserRepo` has been registered as `TestUserRepo` and [`try_add`] was used, the default registration is skipped
+   - Since `dyn UserRepo` has been registered as `TestUserRepo` with [`try_add`], the default registration is skipped
 4. Create a `Router` representing the application
 5. Run the application with a test client
 6. Invoke the HTTP `GET` method to return a single `User`
@@ -98,21 +102,21 @@ You can now easily test your application by replacing on the only necessary serv
 ```rust
 use super::*;
 use crate::*;
-use di::*;
+use di::ServiceCollection;
 
 #[tokio::test]
 async fn get_should_return_user() {
     // arrange
-    #[injectable(UserRepo + Send + Sync)]
+    #[injectable(UserRepo)]
     struct TestUserRepo;
 
     #[async_trait]
     impl UserRepo for TestUserRepo {
-        async fn find(&self, _user_id: Uuid) -> Result<User, UserRepoError> {
+        async fn find(&self, user_id: Uuid) -> Result<User, UserRepoError> {
             Ok(User::default())
         }
 
-        async fn create(&self, _params: CreateUser) -> Result<User, UserRepoError> {
+        async fn create(&self, params: CreateUser) -> Result<User, UserRepoError> {
             unimplemented!()
         }
     }
@@ -124,9 +128,10 @@ async fn get_should_return_user() {
 
     let app = build_app(services);
     let client = TestClient::new(app);
+    let id = "/user/b51565c273c04bb4ac179232c90b20af";
 
     // act
-    let response = client.get("/user/b51565c273c04bb4ac179232c90b20af").send().await;
+    let response = client.get(id).into_future().await;
 
     // assert
     assert_eq!(response.status(), StatusCode::OK);

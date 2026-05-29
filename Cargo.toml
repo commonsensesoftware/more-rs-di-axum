@@ -1,5 +1,58 @@
 [workspace]
-members = ["src", "examples/*"]
-# Only check / build main crates by default (check all with `--workspace`)
-default-members = ["src"]
+members = ["."]
 resolver = "2"
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+authors = ["Chris Martinez <chris.s.martinez@hotmail.com>"]
+license = "MIT"
+repository = "https://github.com/commonsensesoftware/more-rs-di-axum"
+
+[workspace.dependencies]
+axum = { version = "0.8", default-features = false }
+
+[package]
+name = "more-di-axum"
+description = "Provides support dependency injection (DI) for Axum"
+keywords = ["more", "di", "dependency", "injection", "axum"]
+readme = "README.md"
+homepage = "https://commonsensesoftware.github.io/more-rs-di-axum/"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "di_axum"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+more-di = { version = "3.2", features = ["async"] }
+
+# '__private' contains the test client
+# REF: https://github.com/tokio-rs/axum/blob/4a72e063b916f39e0698a345a99a755deb8f345b/axum/Cargo.toml#L103
+[dev-dependencies.axum]
+workspace = true
+features = ["http1", "json", "tokio", "__private"]
+
+[dev-dependencies]
+http = "1.0"
+tower = { version = "0.5", default-features = false, features = ["util"] }
+tokio = { package = "tokio", version = "1.52", features = [
+    "macros",
+    "rt",
+    "rt-multi-thread",
+    "net",
+] }
+
+# only used by examples
+http-body-util = "0.1"
+mime = "0.3"
+serde_json = "1.0"
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"
